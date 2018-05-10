@@ -17,7 +17,7 @@ def register(name):
         'manufacture_name': name
     }
 
-    r = requests.post('http://0.0.0.0:{port}/manufacturer/register'.format(port = port), data = json.dumps(send_info),headers = {'content-type': 'application/json'})
+    r = requests.post('http://{port}/manufacturer/register'.format(port = port), data = json.dumps(send_info),headers = {'content-type': 'application/json'})
     print(r.text)
  
 def manufacture(name,product_name,product_quantity):
@@ -42,7 +42,7 @@ def manufacture(name,product_name,product_quantity):
     }
 
     print(json.dumps(send_info, indent=4))
-    r = requests.post('http://0.0.0.0:{port}/manufacturer/produce'.format(port = port), data = json.dumps(send_info),headers = {'content-type': 'application/json'})
+    r = requests.post('http://{port}/manufacturer/produce'.format(port = port), data = json.dumps(send_info),headers = {'content-type': 'application/json'})
     print("Response")
     print(r.text)
 
@@ -50,12 +50,12 @@ if __name__ == '__main__':
     from argparse import ArgumentParser
 
     parser = ArgumentParser()
-    parser.add_argument('-p', '--port', default=5000, type=int, help='port to connect to')
+    parser.add_argument('-u', '--url', default="http://0.0.0.0:80", type=str, help='url to connect to')
     parser.add_argument('-n', '--name', default="Arpit", type=str, help='name of manufacturer')
     parser.add_argument('-pr', '--prod', default="Arpit", type=str, help='name of product')
     parser.add_argument('-q', '--quantity', default=0, type=int, help='quantity')
     args = parser.parse_args()
-    port = args.port
+    port = args.url
     name = args.name
     product = args.prod
     quantity = args.quantity
@@ -72,7 +72,7 @@ if __name__ == '__main__':
                 'public_key': public_key,
                 'manufacture_name': name
             }
-            r = requests.post('http://0.0.0.0:{port}/manufacturer/register'.format(port = port), data = json.dumps(send_info),headers = {'content-type': 'application/json'})
+            r = requests.post('http://{port}/manufacturer/register'.format(port = port), data = json.dumps(send_info),headers = {'content-type': 'application/json'})
         f.close()
     else:
         key = SigningKey.generate(curve=SECP256k1) 

@@ -12,7 +12,7 @@ class Blockchain:
     def __init__(self):
         self.registered_manufacturer = {}
         self.utxo = {}
-        self.current_transactions = {}
+        self.current_transactions = []
         self.chain = []
 
         self.new_block(proof = self.proof_of_work('CMPE273 - Team Stratus'),previous_hash='CMPE273 - Team Stratus')
@@ -30,20 +30,21 @@ class Blockchain:
         }
 
         # Reset the current list of transactions
-        self.current_transactions = {}
+        self.current_transactions = []
 
         self.chain.append(block)
         return block
     
-    def merkel_root(self,my_transactions):
-        block_string = json.dumps(my_transactions, sort_keys=True).encode()
-        return hashlib.sha256(block_string).hexdigest()
+    # def merkel_root(self,my_transactions):
+    #     block_string = json.dumps(my_transactions, sort_keys=True).encode()
+    #     return hashlib.sha256(block_string).hexdigest()
         
     def hash(self,data):
         block_string = json.dumps(data, sort_keys=True).encode()
         return hashlib.sha256(block_string).hexdigest()
 
     def proof_of_work(self,previous_hash = None):
+        self.current_transactions.append('mined by URL :{port}'.format(port=url + ":" + str(port)))
         me = {
             'index': len(self.chain),
             'proof': 0,
@@ -64,20 +65,39 @@ class Blockchain:
             prev_block_hash = self.hash(prev_block['header'])
             if prev_block_hash != current_block['header']['previous_hash']:
                 print("previous Block fail at " + str(i))
-                return False
+                return False , ("previous Block fail at " + str(i))
             
             if current_block['header']['root'] != self.merkel_root(current_block['transactions']):
                 print("merkel root fail at " + str(i))
-                return False
+                return False , ("merkel root fail at " + str(i))
             
             if self.hash(current_block['header'])[:4] != "0000":
                 print("proof of work fail at " + str(i))
-                return False
+                return False , ("proof of work fail at " + str(i))
             
             prev_block = current_block
         
-        return True
+        return True , "all good"
             
+    def chunks(self,l, n):
+        # if l ==[]:
+        #     yield 'a'
+        for i in range(0, len(l), n):
+            yield l[i:i + n]
+
+    def merkel_root(self,transactions):
+        sub_t = []
+        for i in self.chunks(transactions,2):
+            if len(i) == 2:
+                hash = hashlib.sha256((str(i[0])+str(i[1])).encode()).hexdigest()
+            else:
+                hash = hashlib.sha256((str(i[0])+str(i[0])).encode()).hexdigest()
+            sub_t.append(hash)
+        # print(sub_t)
+        if len(sub_t) == 1:
+            return sub_t[0]
+        else:
+            return self.merkel_root(sub_t)
 
 @app.route('/manufacturer/produce', methods=['POST'])
 def produce():
@@ -113,7 +133,7 @@ def produce():
     my_blockchain.utxo[output_wallet][manufacture_name]= my_blockchain.utxo[output_wallet].get(manufacture_name,{})
     my_blockchain.utxo[output_wallet][manufacture_name][product]= my_blockchain.utxo[output_wallet][manufacture_name].get(product,0) + quantity
 
-    my_blockchain.current_transactions[values['signature']] = new_transaction
+    my_blockchain.current_transactions.append({'signature' : values['signature'],'transaction' : new_transaction})
 
     response = {
         'message' : 'Transaction will be adden in block number: ' + str(len(my_blockchain.chain)),
@@ -171,7 +191,8 @@ def new_transaction():
             my_blockchain.utxo[output_wallet]= my_blockchain.utxo.get(output_wallet,{})
             my_blockchain.utxo[output_wallet][manufacture_name]= my_blockchain.utxo[output_wallet].get(manufacture_name,{})
             my_blockchain.utxo[output_wallet][manufacture_name][product]= my_blockchain.utxo[output_wallet][manufacture_name].get(product,0) + quantity
-            my_blockchain.current_transactions[values['signature']] = values['transaction']
+            
+            my_blockchain.current_transactions.append({'signature' : values['signature'],'transaction' : values['transaction']})
             response = {
                 'message' : 'Transaction will be adden in block number: ' + str(len(my_blockchain.chain)),
                 'new_input_wallet' : my_blockchain.utxo[input_wallet],
@@ -212,11 +233,12 @@ def gossip():
     if not all(k in values for k in required):
         return jsonify({ 'message' :'Missing values'}), 400
     
-    # spread_gossip = False
-    if not (my_blockchain.valid_chain(values['chain'])):
+    validation_result, validation_message = my_blockchain.valid_chain(values['chain'])
+    if not validation_result:
         print("validation failed")
-        return jsonify({'message':'Invalid chain : dropping request'}), 400
+        return jsonify({'message':'Invalid chain : ' + validation_message}), 400
 
+    # spread_gossip = False
     response = {
         'registered_manufacturer' : my_blockchain.registered_manufacturer,
         'utxo' : my_blockchain.utxo,
@@ -255,9 +277,9 @@ def friend_request():
 
     if values['my_info'] not in gossip_friends:
         gossip_friends.append(values['my_info'])
-        friend_request = {'my_info': port}
+        friend_request = {'my_info': url + ":" + str(port)}
         try:
-            requests.post('http://0.0.0.0:{port}/gossip/friend_request'.format(port = values['my_info']), data = json.dumps(friend_request),headers = {'content-type': 'application/json'})
+            requests.post('http://{port}/gossip/friend_request'.format(port = values['my_info']), data = json.dumps(friend_request),headers = {'content-type': 'application/json'})
         except :
             pass
     
@@ -281,28 +303,34 @@ def start_gossip():
 
 def dispatch_gossip(gossip_friend,response):
     try:
-        requests.post('http://0.0.0.0:{port}/gossip'.format(port = gossip_friend), data = json.dumps(response),headers = {'content-type': 'application/json'})
+        requests.post('http://{port}/gossip'.format(port = gossip_friend), data = json.dumps(response),headers = {'content-type': 'application/json'})
+    except :
+        pass
+
+def dispatch_friend_requests(gossip_friend,friend_request):
+    try:
+        requests.post('http://{port}/gossip/friend_request'.format(port = gossip_friend), data = json.dumps(friend_request),headers = {'content-type': 'application/json'})
     except :
         pass
 
 def send_friend_requests():
     # senf friend requests
-    friend_request = {'my_info': port}
+    friend_request = {'my_info': url + ":" + str(port)}
     for gossip_friend in gossip_friends:
-        try:
-            requests.post('http://0.0.0.0:{port}/gossip/friend_request'.format(port = gossip_friend), data = json.dumps(friend_request),headers = {'content-type': 'application/json'})
-        except :
-            pass
+        Thread(target=dispatch_friend_requests, args=(gossip_friend,friend_request )).start()
+        
     
 if __name__ == '__main__':
     from argparse import ArgumentParser
 
     parser = ArgumentParser()
-    parser.add_argument('-p', '--port', default=5000, type=int, help='port to listen on')
-    parser.add_argument('-f','--friends', nargs='+', type=int,default=[], help='set ports to gossip')
+    parser.add_argument('-p', '--port', default=80, type=int, help='port to listen on')
+    parser.add_argument('-f','--friends', nargs='+', type=str,default=[], help='set ports to gossip')
+    parser.add_argument('-u', '--url', default="http://0.0.0.0", type=str, help='url to connect to')
     args = parser.parse_args()
     port = args.port
     gossip_friends = args.friends
+    url = args.url
 
     send_friend_requests()
 
