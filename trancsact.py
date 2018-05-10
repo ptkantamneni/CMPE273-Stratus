@@ -11,14 +11,14 @@ if __name__ == '__main__':
     parser.add_argument('-m', '--manu', default="Arpit", type=str, help='name of manufacturer')
     parser.add_argument('-pr', '--prod', default="Arpit", type=str, help='name of product')
     parser.add_argument('-q', '--quantity', default=0, type=int, help='quantity')
-    parser.add_argument('-p', '--port', default=5000, type=int, help='quantity')
+    parser.add_argument('-u', '--url', default="http://0.0.0.0:80", type=str, help='url to connect to')
     args = parser.parse_args()
     from_w = args.from_w
     to_w = args.to_w
     manufacture_name = args.manu
     product = args.prod
     quantity = args.quantity
-    port = args.port
+    port = args.url
 
     if not os.path.isfile("Private-{name}.pem".format(name=from_w)):
         print("From wallet doesn't exist :" + from_w)
@@ -61,7 +61,7 @@ if __name__ == '__main__':
 
 
     print(json.dumps(send_info, indent=4))
-    r = requests.post('http://0.0.0.0:{port}/transaction/new'.format(port = port), data = json.dumps(send_info),headers = {'content-type': 'application/json'})
+    r = requests.post('http://{port}/transaction/new'.format(port = port), data = json.dumps(send_info),headers = {'content-type': 'application/json'})
     print("Response")
     print(r.text)
 
