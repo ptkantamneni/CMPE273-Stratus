@@ -57,7 +57,28 @@ class Blockchain:
         return me['proof']
 
     def valid_chain(self,new_chain):
+        prev_block = new_chain[0]
+
+        for i in range(1,len(new_chain)):
+            current_block = new_chain[i]
+            prev_block_hash = self.hash(prev_block['header'])
+            if prev_block_hash != current_block['header']['previous_hash']:
+                print("previous Block fail at " + str(i))
+                return False
+            
+            if current_block['header']['root'] != self.merkel_root(current_block['transactions']):
+                print("merkel root fail at " + str(i))
+                return False
+            
+            if self.hash(current_block['header'])[:4] != "0000":
+                print("proof of work fail at " + str(i))
+                return False
+            
+            prev_block = current_block
+        
         return True
+            
+
 @app.route('/manufacturer/produce', methods=['POST'])
 def produce():
     values = request.get_json()
@@ -192,6 +213,9 @@ def gossip():
         return jsonify({ 'message' :'Missing values'}), 400
     
     # spread_gossip = False
+    if not (my_blockchain.valid_chain(values['chain'])):
+        print("validation failed")
+        return jsonify({'message':'Invalid chain : dropping request'}), 400
 
     response = {
         'registered_manufacturer' : my_blockchain.registered_manufacturer,
@@ -208,9 +232,8 @@ def gossip():
     # spread_gossip = True
 
     if len(values['chain']) >= len(my_blockchain.chain):
-        print("length greater")
-        if(my_blockchain.valid_chain(values['chain'])):
-            my_blockchain.chain = values['chain']
+        print("Chain Updated")
+        my_blockchain.chain = values['chain']
 
     my_blockchain.utxo = values['utxo']
     my_blockchain.current_transactions = values['current_transactions']
