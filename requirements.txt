@@ -1,0 +1,5 @@
+requests==2.18.4
+Flask==0.12.2
+pycrypto==2.6.1
+ecdsa=0.13
+pprint=0.1
