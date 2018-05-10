@@ -218,9 +218,37 @@ def mine_block():
 def get_state():
     response = {
         'registered_manufacturer' : my_blockchain.registered_manufacturer,
-        'utxo' : my_blockchain.utxo,
+        'wallets' : my_blockchain.utxo,
         'current_transactions': my_blockchain.current_transactions,
         'chain': my_blockchain.chain
+    }
+    return jsonify(response), 200
+
+@app.route('/chain', methods=['GET'])
+def get_chain():
+    response = {
+        'chain': my_blockchain.chain
+    }
+    return jsonify(response), 200
+
+@app.route('/registered_manufacturer', methods=['GET'])
+def get_registered_manufacturer():
+    response = {
+        'registered_manufacturer' : my_blockchain.registered_manufacturer,
+    }
+    return jsonify(response), 200
+
+@app.route('/current_transactions', methods=['GET'])
+def get_current_transactions():
+    response = {
+        'current_transactions': my_blockchain.current_transactions,
+    }
+    return jsonify(response), 200
+
+@app.route('/wallets', methods=['GET'])
+def get_chain():
+    response = {
+        'wallets' : my_blockchain.utxo,
     }
     return jsonify(response), 200
 
@@ -318,8 +346,7 @@ def send_friend_requests():
     friend_request = {'my_info': url }
     for gossip_friend in gossip_friends:
         Thread(target=dispatch_friend_requests, args=(gossip_friend,friend_request )).start()
-        
-    
+
 if __name__ == '__main__':
     from argparse import ArgumentParser
 
