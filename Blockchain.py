@@ -277,7 +277,7 @@ def friend_request():
 
     if values['my_info'] not in gossip_friends:
         gossip_friends.append(values['my_info'])
-        friend_request = {'my_info': url + ":" + str(port)}
+        friend_request = {'my_info': url}
         try:
             requests.post('http://{port}/gossip/friend_request'.format(port = values['my_info']), data = json.dumps(friend_request),headers = {'content-type': 'application/json'})
         except :
@@ -315,7 +315,7 @@ def dispatch_friend_requests(gossip_friend,friend_request):
 
 def send_friend_requests():
     # senf friend requests
-    friend_request = {'my_info': url + ":" + str(port)}
+    friend_request = {'my_info': url }
     for gossip_friend in gossip_friends:
         Thread(target=dispatch_friend_requests, args=(gossip_friend,friend_request )).start()
         
