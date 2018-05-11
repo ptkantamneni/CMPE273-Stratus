@@ -38,7 +38,7 @@ class Blockchain:
         return block
 
     
-    def merkel_root(self,transactions):
+    def merkel(self,transactions):
         sub_t = []
         for i in self.chunks(transactions,2):
             if len(i) == 2:
