@@ -246,7 +246,7 @@ def get_current_transactions():
     return jsonify(response), 200
 
 @app.route('/wallets', methods=['GET'])
-def get_chain():
+def get_wallets():
     response = {
         'wallets' : my_blockchain.utxo,
     }
