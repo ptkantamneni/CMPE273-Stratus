@@ -15,6 +15,8 @@ class Blockchain:
         self.current_transactions = []
         self.chain = []
 
+        self.current_transactions.append('mined by URL :{port}'.format(port=url + ":" + str(port)))
+
         self.new_block(proof = self.proof_of_work('CMPE273 - Team Stratus'),previous_hash='CMPE273 - Team Stratus')
 
     def new_block(self, proof,previous_hash = None):
@@ -44,7 +46,6 @@ class Blockchain:
         return hashlib.sha256(block_string).hexdigest()
 
     def proof_of_work(self,previous_hash = None):
-        self.current_transactions.append('mined by URL :{port}'.format(port=url + ":" + str(port)))
         me = {
             'index': len(self.chain),
             'proof': 0,
@@ -208,6 +209,7 @@ def new_transaction():
 
 @app.route('/mine', methods=['POST'])
 def mine_block():
+    my_blockchain.current_transactions.append('mined by URL :{port}'.format(port=url + ":" + str(port)))
     proof = my_blockchain.proof_of_work()
     my_blockchain.new_block(proof)
 
@@ -281,14 +283,23 @@ def gossip():
 
     # spread_gossip = True
 
-    if len(values['chain']) >= len(my_blockchain.chain):
-        print("Chain Updated")
-        my_blockchain.chain = values['chain']
-
     my_blockchain.utxo = values['utxo']
     my_blockchain.current_transactions = values['current_transactions']
     
     my_blockchain.registered_manufacturer.update(values['registered_manufacturer'])
+
+    if len(values['chain']) >= len(my_blockchain.chain):
+        print("Chain Updated")
+        my_blockchain.chain = values['chain']
+    else:
+        response = {
+            'message' : 'your chain is behind',
+            'registered_manufacturer' : my_blockchain.registered_manufacturer,
+            'utxo' : my_blockchain.utxo,
+            'current_transactions': my_blockchain.current_transactions,
+            'chain': my_blockchain.chain
+        }
+        return jsonify(response) , 200
 
     start_gossip()
 
@@ -331,7 +342,10 @@ def start_gossip():
 
 def dispatch_gossip(gossip_friend,response):
     try:
-        requests.post('http://{port}/gossip'.format(port = gossip_friend), data = json.dumps(response),headers = {'content-type': 'application/json'})
+        r = requests.post('http://{port}/gossip'.format(port = gossip_friend), data = json.dumps(response),headers = {'content-type': 'application/json'})
+        message = r.json()
+        if (message['message']) == 'your chain is behind':
+            my_blockchain.chain = message['chain'] 
     except :
         pass
 
