@@ -25,7 +25,7 @@ class Blockchain:
             'header' : {
                 'index': len(self.chain),
                 'proof': proof,
-                'root': self.merkel_root(self.current_transactions),
+                'merkel_root': self.merkel_root(self.current_transactions),
                 'previous_hash': previous_hash or self.hash(self.chain[-1]['header'])
             },
             'transactions': self.current_transactions
@@ -36,10 +36,21 @@ class Blockchain:
 
         self.chain.append(block)
         return block
+
     
-    # def merkel_root(self,my_transactions):
-    #     block_string = json.dumps(my_transactions, sort_keys=True).encode()
-    #     return hashlib.sha256(block_string).hexdigest()
+    def merkel_root(self,transactions):
+        sub_t = []
+        for i in self.chunks(transactions,2):
+            if len(i) == 2:
+                hash = hashlib.sha256((str(i[0])+str(i[1])).encode()).hexdigest()
+            else:
+                hash = hashlib.sha256((str(i[0])+str(i[0])).encode()).hexdigest()
+            sub_t.append(hash)
+        # print(sub_t)
+        if len(sub_t) == 1:
+            return sub_t[0]
+        else:
+            return self.merkel_root(sub_t)
         
     def hash(self,data):
         block_string = json.dumps(data, sort_keys=True).encode()
@@ -49,7 +60,7 @@ class Blockchain:
         me = {
             'index': len(self.chain),
             'proof': 0,
-            'root': self.merkel_root(self.current_transactions),
+            'merkel_root': self.merkel_root(self.current_transactions),
             'previous_hash': previous_hash or self.hash(self.chain[-1]['header'])
         }
 
@@ -68,7 +79,7 @@ class Blockchain:
                 print("previous Block fail at " + str(i))
                 return False , ("previous Block fail at " + str(i))
             
-            if current_block['header']['root'] != self.merkel_root(current_block['transactions']):
+            if current_block['header']['merkel_root'] != self.merkel_root(current_block['transactions']):
                 print("merkel root fail at " + str(i))
                 return False , ("merkel root fail at " + str(i))
             
@@ -86,19 +97,10 @@ class Blockchain:
         for i in range(0, len(l), n):
             yield l[i:i + n]
 
-    def merkel_root(self,transactions):
-        sub_t = []
-        for i in self.chunks(transactions,2):
-            if len(i) == 2:
-                hash = hashlib.sha256((str(i[0])+str(i[1])).encode()).hexdigest()
-            else:
-                hash = hashlib.sha256((str(i[0])+str(i[0])).encode()).hexdigest()
-            sub_t.append(hash)
-        # print(sub_t)
-        if len(sub_t) == 1:
-            return sub_t[0]
-        else:
-            return self.merkel_root(sub_t)
+    
+    def merkel_root(self,my_transactions):
+        block_string = json.dumps(my_transactions, sort_keys=True).encode()
+        return hashlib.sha256(block_string).hexdigest()
 
 @app.route('/manufacturer/produce', methods=['POST'])
 def produce():
